@@ -1,0 +1,58 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environment
+venv/
+env/
+.venv/
+ENV/
+
+# Flask / app environment variables
+.env
+.env.*
+*/.env
+backend/.env
+
+# SQLite database and related
+*.sqlite3
+*.db
+*.db-journal
+data/app.db
+
+# Logs
+*.log
+
+# Cache files
+*.cache/
+.cache/
+*.egg-info/
+
+# Node.js frontend
+node_modules/
+dist/
+build/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Test artifacts
+.coverage
+htmlcov/
+__snapshots__/
+
+# YOLO model weights
+*.pt
+best.pt  # your YOLO model
+runs/    # YOLO inference runs directory
+
+# Frontend dev artifacts 
+*.tsbuildinfo
+.next/
+.out/

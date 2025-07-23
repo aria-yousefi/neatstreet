@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&family=Titillium+Web:ital,wght@0,200;0,300;0,400;0,600;0,700;0,900;1,200;1,300;1,400;1,600;1,700&display=swap');
+
+@layer components {
+    .navbar-icon {
+        @apply relative flex items-center justify-center
+        h-12 w-12 mt-2 mb-2 mx-2 shadow-lg
+        bg-green-500 text-white
+        hover:bg-green-700 hover:text-gray-200
+        rounded-3xl hover:rounded-xl
+        transition-all duration-300 ease-linear;
+    }
+
+    .navbar-tooltip {
+        @apply absolute w-auto p-2 min-w-max top-14 z-50
+        rounded-md shadow-md
+        text-white bg-green-700
+        text-xs font-titillium
+        transition-all duration-100 scale-0 origin-top;
+    }
+}

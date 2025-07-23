@@ -1,0 +1,6 @@
+Flask
+flask-cors
+requests
+Werkzeug
+flask_sqlalchemy
+flask-jwt-extended
