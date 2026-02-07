@@ -1,22 +1,26 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import FeedScreen from "./src/screens/FeedScreen";
+import ReportDetailScreen from "./src/screens/ReportDetailScreen";
+import ReportCameraScreen from "./src/screens/ReportCameraScreen";
+import CreateReportScreen from "./src/screens/CreateReportScreen";
 
-const API_BASE_URL = 'http://localhost:5000';
+
+const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen name="Feed" component={FeedScreen} options={{ title: "NeatStreet" }} />
+        <Stack.Screen
+          name="ReportDetail"
+          component={ReportDetailScreen}
+          options={{ title: "Report Details" }}
+        />
+        <Stack.Screen name="ReportCamera" component={ReportCameraScreen} options={{ title: "Take Photo" }} />
+        <Stack.Screen name="CreateReport" component={CreateReportScreen} options={{ title: "Create Report" }} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

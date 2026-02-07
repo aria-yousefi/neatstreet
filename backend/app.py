@@ -13,6 +13,3 @@ init_db(app)
 
 app.register_blueprint(report_bp)
 # app.register_blueprint(auth_bp)
-
-if __name__ == '__main__':
-    app.run(threaded=True)

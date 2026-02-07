@@ -1,4 +1,5 @@
 from flask import request, jsonify, send_from_directory, Blueprint
+import pandas as pd
 import os
 
 from database import db
@@ -15,6 +16,7 @@ def allowed_file(filename):
 
 
 report_bp = Blueprint('report', __name__)
+
 
 @report_bp.route('/report', methods=['POST'])
 def report_issue():
@@ -33,10 +35,17 @@ def report_issue():
     if (lat := request.form.get('lat')) is None or (lon := request.form.get('lon')) is None:
         return jsonify({'error': 'Error fetching coordinates'}), 400
 
+    img.stream.seek(0, os.SEEK_END)
+    size = img.stream.tell()
+    img.stream.seek(0)
+    print("UPLOAD size bytes:", size, "filename:", img.filename, "content_type:", img.content_type)
+
     # Classify the issue using YOLOv8
     issue_type = classify_image(img)
-    if issue_type is None:
-        return jsonify("Error identifying issue."), 500
+
+    # If model can't detect known classes, accept the report anyway
+    if not issue_type:
+        issue_type = "other"   # or "unknown"
     
     # Reset file pointer to the beginning
     img.seek(0)  
