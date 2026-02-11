@@ -35,6 +35,10 @@ def report_issue():
     if (lat := request.form.get('lat')) is None or (lon := request.form.get('lon')) is None:
         return jsonify({'error': 'Error fetching coordinates'}), 400
 
+    # Get new fields
+    details = request.form.get('details')
+    user_defined_issue_type = request.form.get('user_defined_issue_type')
+
     img.stream.seek(0, os.SEEK_END)
     size = img.stream.tell()
     img.stream.seek(0)
@@ -47,6 +51,10 @@ def report_issue():
     if not issue_type:
         issue_type = "other"   # or "unknown"
     
+    # Conditional validation for 'other' issue type
+    if issue_type == "other" and not user_defined_issue_type:
+        return jsonify({'error': 'User-defined issue type is required when issue type is "other"'}), 400
+
     # Reset file pointer to the beginning
     img.seek(0)  
     
@@ -70,6 +78,8 @@ def report_issue():
     report = Report(
         image_filename=filename,
         issue_type=issue_type,
+        user_defined_issue_type=user_defined_issue_type, # New field
+        details=details, # New field
         address=address,
         latitude=float(lat),
         longitude=float(lon)
@@ -93,6 +103,8 @@ def get_report(report_id):
         'id': report.id,
         'image_url': f"http://localhost:5000/uploads/{report.image_filename}",
         'issue_type': report.issue_type,
+        'user_defined_issue_type': report.user_defined_issue_type, # New field
+        'details': report.details, # New field
         'address': report.address,
         'latitude': report.latitude,
         'longitude': report.longitude,
@@ -110,6 +122,8 @@ def get_all_reports():
             'image_filename': report.image_filename,
             'image_url': f"http://localhost:5000/uploads/{report.image_filename}",
             'issue_type': report.issue_type,
+            'user_defined_issue_type': report.user_defined_issue_type, # New field
+            'details': report.details, # New field
             'address': report.address,
             'latitude': report.latitude,
             'longitude': report.longitude,

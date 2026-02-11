@@ -13,6 +13,8 @@ class Report(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     image_filename = db.Column(db.String(120), nullable=False)
     issue_type = db.Column(db.String(50), nullable=False)
+    user_defined_issue_type = db.Column(db.String(100), nullable=True) # New field
+    details = db.Column(db.String(500), nullable=True) # New field
     address = db.Column(db.String(200), nullable=True)
     latitude = db.Column(db.Float, nullable=False)
     longitude = db.Column(db.Float, nullable=False)
