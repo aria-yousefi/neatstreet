@@ -3,18 +3,20 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, View, ActivityIndicator, TextInput, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import * as Location from 'expo-location';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { classifyIssue, createUserReport } from '../src/lib/api'; // Adjusted import path
+import { createUserReport } from '../src/lib/api';
+import { useAuth } from '../src/lib/AuthContext';
 
-// Logic is from your old CreateReportScreen.js
 const ISSUE_TYPES = ['pothole', 'trash', 'graffiti', 'sidewalk', 'other'];
 
 export default function CreateReportScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const {
     photoUri,
     latitude: latStr,
     longitude: lonStr,
-  } = useLocalSearchParams<{ photoUri: string; latitude: string; longitude: string }>();
+    issueType: initialIssueType,
+  } = useLocalSearchParams<{ photoUri: string; latitude: string; longitude: string; issueType: string }>();
   const parsedLocation = { latitude: parseFloat(latStr), longitude: parseFloat(lonStr) };
 
   if (!photoUri) {
@@ -26,7 +28,7 @@ export default function CreateReportScreen() {
     );
   }
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start loading while we geocode
   const [submitting, setSubmitting] = useState(false);
   const [address, setAddress] = useState('');
   const [issueType, setIssueType] = useState('other');
@@ -46,8 +48,14 @@ export default function CreateReportScreen() {
 
   useEffect(() => {
     let isMounted = true;
+
+    // Set the issue type based on the classification from the previous screen
+    if (initialIssueType && ISSUE_TYPES.includes(initialIssueType)) {
+      setIssueType(initialIssueType);
+      setClassificationNote(`Auto-detected: ${initialIssueType}`);
+    }
+
     async function bootstrap() {
-      setLoading(true);
       try {
         if (!isNaN(parsedLocation.latitude) && !isNaN(parsedLocation.longitude)) {
           const places = await Location.reverseGeocodeAsync(parsedLocation);
@@ -56,29 +64,30 @@ export default function CreateReportScreen() {
             setAddress([p.name, p.street, p.city, p.region, p.postalCode, p.country].filter(Boolean).join(', '));
           }
         }
-        const result = await classifyIssue(photoUri);
-        if (isMounted && result?.issue_type) {
-          setIssueType(result.issue_type);
-          setClassificationNote(`Auto-detected: ${result.issue_type}`);
-        }
       } catch (e) {
         console.error(e);
       } finally {
         if (isMounted) setLoading(false);
       }
     }
+
     bootstrap();
     return () => { isMounted = false; };
-  }, [photoUri, latStr, lonStr]);
+  }, [photoUri, latStr, lonStr, initialIssueType]);
 
   async function submit() {
-    if (!canSubmit) return;
+    if (!canSubmit || !user) {
+      Alert.alert('Cannot Submit', 'You must be logged in to submit a report.');
+      return;
+    }
     setSubmitting(true);
     try {
       await createUserReport({
         photoUri,
         lat: parsedLocation.latitude,
         lon: parsedLocation.longitude,
+        userId: user.id,
+        issue_type: issueType,
         user_defined_issue_type: issueType === 'other' ? userDefinedIssueType.trim() : undefined,
         details: details.trim() || undefined,
       });

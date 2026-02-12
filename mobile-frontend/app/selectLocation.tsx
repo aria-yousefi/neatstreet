@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function SelectLocationScreen() {
   const router = useRouter();
-  const { photoUri } = useLocalSearchParams<{ photoUri: string }>();
+  const { photoUri, issueType: initialIssueType } = useLocalSearchParams<{ photoUri: string, issueType: string }>();
 
   const [initialRegion, setInitialRegion] = useState<Region | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<Region | null>(null);
@@ -50,6 +50,7 @@ export default function SelectLocationScreen() {
       pathname: './createReport',
       params: {
         photoUri,
+	issueType: initialIssueType ?? '',
         latitude: String(selectedLocation.latitude),
         longitude: String(selectedLocation.longitude),
       },

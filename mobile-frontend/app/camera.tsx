@@ -1,12 +1,13 @@
 // This is a new file
-import { useState, JSX } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState, JSX, useEffect } from 'react';
+import { Alert, Image, Pressable, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-
+import { classifyIssue } from '../src/lib/api';
 export default function ReportCameraScreen(): JSX.Element {
   const router = useRouter();
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [classifying, setClassifying] = useState(false);
 
   async function takePhoto(): Promise<void> {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -14,6 +15,7 @@ export default function ReportCameraScreen(): JSX.Element {
       Alert.alert('Camera permission needed', 'Please enable camera access to take a report photo.');
       return;
     }
+
 
     const result = await ImagePicker.launchCameraAsync({
       quality: 0.8,
@@ -23,13 +25,31 @@ export default function ReportCameraScreen(): JSX.Element {
       return;
     }
 
-    // After the check above, we know assets is not null and has at least one item.
-    setPhotoUri(result.assets[0].uri);
+    const uri = result.assets[0].uri;
+    setPhotoUri(uri);
   }
+
+  const [issueType, setIssueType] = useState<string | null>(null);
+  useEffect(() => {
+    async function classify() {
+      if (!photoUri) return;
+      setClassifying(true);
+      try {
+        const result = await classifyIssue(photoUri);
+        setIssueType(result?.issue_type || null);
+      } catch (e) {
+        console.error('Classification failed', e);
+      } finally {
+        setClassifying(false);
+      }
+    }
+
+    classify();
+  }, [photoUri]);
 
   function useThisPhoto() {
     if (!photoUri) return;
-    router.push(`./selectLocation?photoUri=${encodeURIComponent(photoUri)}`);
+    router.push(`./selectLocation?photoUri=${encodeURIComponent(photoUri)}&issueType=${encodeURIComponent(issueType ?? '')}`);
   }
 
   // UI from your old ReportCameraScreen.js
@@ -42,8 +62,12 @@ export default function ReportCameraScreen(): JSX.Element {
       <Pressable style={styles.primaryBtn} onPress={takePhoto}>
         <Text style={styles.primaryBtnText}>{photoUri ? 'Retake Photo' : 'Take Photo'}</Text>
       </Pressable>
-      <Pressable style={[styles.secondaryBtn, !photoUri && styles.disabled]} onPress={useThisPhoto} disabled={!photoUri}>
-        <Text style={styles.secondaryBtnText}>Use This Photo</Text>
+      <Pressable style={[styles.secondaryBtn, (!photoUri || classifying) && styles.disabled]} onPress={useThisPhoto} disabled={!photoUri || classifying}>
+        {classifying ? (
+          <ActivityIndicator color="#111" />
+        ) : (
+          <Text style={styles.secondaryBtnText}>Use This Photo</Text>
+        )}
       </Pressable>
     </View>
   );

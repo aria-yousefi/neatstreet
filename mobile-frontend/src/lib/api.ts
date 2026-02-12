@@ -149,6 +149,8 @@ export async function createUserReport(input: {
   photoUri: string;
   lat: number;
   lon: number;
+  userId: number;
+  issue_type: string;
   user_defined_issue_type?: string; // New field
   details?: string; // New field
 }): Promise<Report> {
@@ -162,6 +164,8 @@ export async function createUserReport(input: {
   const form = new FormData();
   form.append("lat", String(input.lat));
   form.append("lon", String(input.lon));
+  form.append("user_id", String(input.userId));
+  form.append("issue_type", input.issue_type);
   if (input.user_defined_issue_type) {
     form.append("user_defined_issue_type", input.user_defined_issue_type);
   }
@@ -201,6 +205,20 @@ export async function loginUser(input: {
   return request<{ message: string; user: User }>("/login", {
     method: "POST",
     body: input,
+  });
+}
+
+export async function getMyReports(userId: number): Promise<Report[]> {
+  return request<Report[]>(`/my-reports/${userId}`);
+}
+
+export async function deleteReport(reportId: number, userId: number): Promise<{ message: string }> {
+  return request<{ message: string }>(`/report/${reportId}`, {
+    method: 'DELETE',
+    // This is a simplified auth check. In a real app, this would be a JWT token.
+    body: {
+      user_id: userId,
+    },
   });
 }
 
