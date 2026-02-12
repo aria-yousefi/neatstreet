@@ -2,7 +2,7 @@ from flask import Flask
 from flask_cors import CORS 
 from database import init_db, db
 from routes.report_routes import report_bp
-# from routes.auth_routes import auth_bp
+from routes.auth_routes import auth_bp
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,4 +13,4 @@ CORS(app)
 init_db(app)
 
 app.register_blueprint(report_bp)
-# app.register_blueprint(auth_bp)
+app.register_blueprint(auth_bp)

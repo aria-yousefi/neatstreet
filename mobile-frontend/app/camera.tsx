@@ -29,7 +29,7 @@ export default function ReportCameraScreen(): JSX.Element {
 
   function useThisPhoto() {
     if (!photoUri) return;
-    router.push(`./createReport?photoUri=${encodeURIComponent(photoUri)}`);
+    router.push(`./selectLocation?photoUri=${encodeURIComponent(photoUri)}`);
   }
 
   // UI from your old ReportCameraScreen.js

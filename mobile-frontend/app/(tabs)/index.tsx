@@ -80,12 +80,13 @@ export default function FeedScreen() {
   return (
     <View style={styles.container}>
       <MapView
+        showsUserLocation
         style={styles.map}
         initialRegion={{
           latitude: userLocation.latitude,
           longitude: userLocation.longitude,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
+          latitudeDelta: 0.04,
+          longitudeDelta: 0.02,
         }}>
         {reports.map((report) => (
           <Marker

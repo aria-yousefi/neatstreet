@@ -10,7 +10,12 @@ const ISSUE_TYPES = ['pothole', 'trash', 'graffiti', 'sidewalk', 'other'];
 
 export default function CreateReportScreen() {
   const router = useRouter();
-  const { photoUri } = useLocalSearchParams<{ photoUri: string }>();
+  const {
+    photoUri,
+    latitude: latStr,
+    longitude: lonStr,
+  } = useLocalSearchParams<{ photoUri: string; latitude: string; longitude: string }>();
+  const parsedLocation = { latitude: parseFloat(latStr), longitude: parseFloat(lonStr) };
 
   if (!photoUri) {
     return (
@@ -21,10 +26,8 @@ export default function CreateReportScreen() {
     );
   }
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [latitude, setLatitude] = useState<number | null>(null);
-  const [longitude, setLongitude] = useState<number | null>(null);
   const [address, setAddress] = useState('');
   const [issueType, setIssueType] = useState('other');
   const [userDefinedIssueType, setUserDefinedIssueType] = useState('');
@@ -32,29 +35,28 @@ export default function CreateReportScreen() {
   const [classificationNote, setClassificationNote] = useState('');
 
   const canSubmit = useMemo(
-    () => !!photoUri && typeof latitude === 'number' && typeof longitude === 'number' && !submitting && !(issueType === 'other' && !userDefinedIssueType.trim()),
-    [photoUri, latitude, longitude, submitting, issueType, userDefinedIssueType]
+    () =>
+      !!photoUri &&
+      !isNaN(parsedLocation.latitude) &&
+      !isNaN(parsedLocation.longitude) &&
+      !submitting &&
+      !(issueType === 'other' && !userDefinedIssueType.trim()),
+    [photoUri, parsedLocation, submitting, issueType, userDefinedIssueType]
   );
 
   useEffect(() => {
     let isMounted = true;
     async function bootstrap() {
+      setLoading(true);
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          setLatitude(0); setLongitude(0); // Set to a non-null value
-        } else {
-          const pos = await Location.getCurrentPositionAsync({});
-          if (!isMounted) return;
-          setLatitude(pos.coords.latitude);
-          setLongitude(pos.coords.longitude);
-          const places = await Location.reverseGeocodeAsync(pos.coords);
+        if (!isNaN(parsedLocation.latitude) && !isNaN(parsedLocation.longitude)) {
+          const places = await Location.reverseGeocodeAsync(parsedLocation);
           if (isMounted && places?.[0]) {
             const p = places[0];
             setAddress([p.name, p.street, p.city, p.region, p.postalCode, p.country].filter(Boolean).join(', '));
           }
         }
-        const result = await classifyIssue(photoUri as string);
+        const result = await classifyIssue(photoUri);
         if (isMounted && result?.issue_type) {
           setIssueType(result.issue_type);
           setClassificationNote(`Auto-detected: ${result.issue_type}`);
@@ -67,13 +69,19 @@ export default function CreateReportScreen() {
     }
     bootstrap();
     return () => { isMounted = false; };
-  }, [photoUri]);
+  }, [photoUri, latStr, lonStr]);
 
   async function submit() {
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      await createUserReport({ photoUri, lat: latitude!, lon: longitude!, user_defined_issue_type: issueType === 'other' ? userDefinedIssueType.trim() : undefined, details: details.trim() || undefined });
+      await createUserReport({
+        photoUri,
+        lat: parsedLocation.latitude,
+        lon: parsedLocation.longitude,
+        user_defined_issue_type: issueType === 'other' ? userDefinedIssueType.trim() : undefined,
+        details: details.trim() || undefined,
+      });
       router.replace({ pathname: '/', params: { refresh: 'true' } });
       Alert.alert('Report Submitted', 'Your report has been submitted successfully!');
     } catch (e: any) {
@@ -109,7 +117,9 @@ export default function CreateReportScreen() {
         </View>
         <View style={styles.section}>
           <Text style={styles.label}>Location</Text>
-          <Text style={styles.value}>{latitude?.toFixed?.(5)}, {longitude?.toFixed?.(5)}</Text>
+          <Text style={styles.value}>
+            {parsedLocation.latitude.toFixed(5)}, {parsedLocation.longitude.toFixed(5)}
+          </Text>
           {!!address && (<><Text style={[styles.label, { marginTop: 10 }]}>Address</Text><Text style={styles.value}>{address}</Text></>)}
         </View>
         <View style={styles.footer}>

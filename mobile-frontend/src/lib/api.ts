@@ -94,6 +94,12 @@ export type Report = {
   timestamp?: string;
 };
 
+export type User = {
+  id: number;
+  username: string;
+  email: string;
+};
+
 export async function getAllReports(): Promise<Report[]> {
   // Use the generic request helper for consistency and better error handling.
   const data = await request<Report[]>("/user_reports");
@@ -184,4 +190,27 @@ export async function createUserReport(input: {
   if (!res.ok) throw new Error(`Create report failed (HTTP ${res.status}): ${text}`);
 
   return JSON.parse(text);
+}
+
+/** ---- Auth endpoints ---- **/
+
+export async function loginUser(input: {
+  username: string;
+  password: string;
+}): Promise<{ message: string; user: User }> {
+  return request<{ message: string; user: User }>("/login", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function registerUser(input: {
+  username: string;
+  email: string;
+  password: string;
+}): Promise<{ message: string; user_id: number }> {
+  return request<{ message: string; user_id: number }>("/register", {
+    method: "POST",
+    body: input,
+  });
 }
