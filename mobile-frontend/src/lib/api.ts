@@ -209,7 +209,11 @@ export async function loginUser(input: {
 }
 
 export async function getMyReports(userId: number): Promise<Report[]> {
-  return request<Report[]>(`/my-reports/${userId}`);
+  const reports = await request<Report[]>(`/my-reports/${userId}`);
+  return reports.map((report) => ({
+    ...report,
+    image_url: normalizeImageUrl(report.image_url ?? ''),
+  }));
 }
 
 export async function deleteReport(reportId: number, userId: number): Promise<{ message: string }> {

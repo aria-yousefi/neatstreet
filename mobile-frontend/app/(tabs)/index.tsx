@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, Alert, Image } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, Callout } from 'react-native-maps';
 import { getAllReports, Report } from '../../src/lib/api'; // Adjusted import path
 import * as Location from 'expo-location';
 import { useFocusEffect } from 'expo-router'; // Use useFocusEffect from expo-router
@@ -92,18 +92,31 @@ export default function FeedScreen() {
           <Marker
             key={report.id}
             coordinate={{ latitude: report.latitude, longitude: report.longitude }}
-            onPress={() =>
-              router.push({
-                pathname: './reportDetail',
-                // All params must be strings for type safety, so we explicitly cast number types.
-                params: { ...report, latitude: String(report.latitude), longitude: String(report.longitude) },
-              })
-            }
           >
             <Image source={{uri: report.image_url }} style={styles.annotationThumbnail} />
+            <Callout
+              tooltip
+              onPress={() =>
+                router.push({
+                  pathname: './reportDetail',
+                  // All params must be strings for type safety, so we explicitly cast number types.
+                  params: { ...report, latitude: String(report.latitude), longitude: String(report.longitude) },
+                })
+              }
+            >
+              <View style={styles.calloutContainer}>
+                <Image source={{ uri: report.image_url }} style={styles.calloutImage} />
+                <Text style={styles.calloutText}>
+                  {report.issue_type === 'other' && report.user_defined_issue_type ? report.user_defined_issue_type : report.issue_type}
+                </Text>
+                <Text style={styles.calloutSubtext}>Tap to see details</Text>
+                {/* <Text style={styles.calloutAddress}>{report.address}</Text> */}
+              </View>
+            </Callout>
           </Marker>
         ))}
       </MapView>
+     
       {/* Use a relative path for consistency */}
       <Pressable style={styles.newBtn} onPress={() => router.push('./camera')}>
         <Text style={styles.newBtnText}>+ New Report</Text>
@@ -140,4 +153,32 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
     resizeMode: 'cover',
   },
+  calloutContainer: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderColor: '#ddd',
+    borderWidth: 1,
+    width: 150, // Set a fixed width to prevent text from wrapping incorrectly
+  },
+  calloutText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#111',
+    marginBottom: 5,
+  },
+  calloutSubtext: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+   calloutImage: {
+    width: 120,
+    height: 90,
+    marginTop: 5,
+    borderRadius: 5,
+  },
+  calloutAddress: { fontSize: 12, color: '#333', marginTop: 3 },
+
 });

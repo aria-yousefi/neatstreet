@@ -3,9 +3,12 @@ import { Pressable, StyleSheet, Text, View, FlatList, ActivityIndicator, Alert }
 import { useAuth } from '../../src/lib/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { getMyReports, deleteReport, Report } from '../../src/lib/api';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { Image } from 'react-native';
+
 
 export default function AccountScreen(): JSX.Element {
+  const router = useRouter();
   const { user, logout } = useAuth();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,12 +49,28 @@ export default function AccountScreen(): JSX.Element {
             data={reports}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <View style={styles.reportItem}>
-                <Text style={styles.reportText}>{item.issue_type === 'other' ? item.user_defined_issue_type : item.issue_type}</Text>
-                <Pressable onPress={() => handleDelete(item.id)}>
+              <Pressable
+                style={styles.reportItem}
+                onPress={() =>
+                  router.push({
+                    // Navigate to the detail screen from the (tabs) group
+                    pathname: '../reportDetail',
+                    params: { ...item, latitude: String(item.latitude), longitude: String(item.longitude) },
+                  })
+                }
+              >
+                <Image source={{ uri: item.image_url }} style={styles.reportImage} />
+                <View style={styles.reportTextContainer}>
+                  <Text style={styles.reportText} numberOfLines={1}>
+                    {item.issue_type === 'other' ? item.user_defined_issue_type : item.issue_type}
+                  </Text>
+                  <Text style={styles.reportAddress} numberOfLines={1}>{item.address}</Text>
+                </View>
+                {/* Stop propagation to prevent navigating when deleting */}
+                <Pressable onPress={(e) => { e.stopPropagation(); handleDelete(item.id); }} style={styles.deleteButton}>
                   <Ionicons name="trash-outline" size={22} color="#cc0000" />
                 </Pressable>
-              </View>
+              </Pressable>
             )}
             ListEmptyComponent={<Text style={styles.emptyText}>You have not submitted any reports yet.</Text>}
           />
@@ -98,14 +117,32 @@ const styles = StyleSheet.create({
   },
   reportItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#f2f2f2',
   },
+  reportImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: '#f0f0f0',
+  },
+  reportTextContainer: {
+    flex: 1, // Allow this container to grow and fill space
+  },
   reportText: {
     fontSize: 16,
+    fontWeight: '600',
+  },
+  reportAddress: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+  },
+  deleteButton: {
+    paddingLeft: 12, // Add padding to make the delete icon easier to tap
   },
   emptyText: { color: '#666', textAlign: 'center', marginTop: 20 },
   logoutButton: {
