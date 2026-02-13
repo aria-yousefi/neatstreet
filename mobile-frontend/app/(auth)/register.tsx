@@ -11,6 +11,7 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useAuth } from '../../src/lib/AuthContext';
 import { useRouter } from 'expo-router';
 
@@ -49,6 +50,10 @@ export default function RegisterScreen() {
       style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardDismissMode="on-drag">
         <View style={styles.header}>
+          <Image
+            source={require('../../assets/images/pave-logo.png')}
+            style={styles.logo}
+          />
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>Join the community to report issues.</Text>
         </View>
@@ -107,6 +112,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   scrollContent: { flexGrow: 1, justifyContent: 'center', padding: 24 },
   header: { marginBottom: 32, alignItems: 'center' },
+  logo: {
+    width: 180,
+    height: 60,
+    marginBottom: 24,
+    contentFit: 'contain',
+  },
   title: { fontSize: 28, fontWeight: '800', color: '#111', marginBottom: 8 },
   subtitle: { fontSize: 16, color: '#666', textAlign: 'center' },
   form: { width: '100%' },
