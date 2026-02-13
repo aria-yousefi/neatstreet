@@ -1,10 +1,12 @@
 from flask import request, jsonify, send_from_directory, Blueprint
-import pandas as pd
 import os
+import uuid
+from datetime import datetime
 
 from database import db
-from database.models import Report, User
+from database.models import Report, User, ScrapedReport
 from utils.geolocate import reverse_geocode
+from PIL import Image as PILImage
 from ml_model.classify import classify_image
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
@@ -12,8 +14,6 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
 
 report_bp = Blueprint('report', __name__)
 
@@ -69,19 +69,26 @@ def report_issue():
     if issue_type == "other" and not user_defined_issue_type:
         return jsonify({'error': 'User-defined issue type is required when issue type is "other"'}), 400
 
-    # Reset file pointer to the beginning
-    img.seek(0)
-    
-    # Get the next ID safely
-    last_report = db.session.query(Report).order_by(Report.id.desc()).first()
-    next_id = (last_report.id + 1) if last_report else 1
-
-    # Generate filename
+    # Generate a highly unique filename to prevent frontend caching issues
+    # where an old image might be shown for a new report.
     ext = os.path.splitext(img.filename)[1]
-    safe_issue_type = issue_type.replace(" ", "_").lower()
-    filename = f"{user_id}_{next_id}_{safe_issue_type}{ext}"
+    timestamp_str = datetime.now().strftime("%Y%m%d%H%M%S")
+    unique_hash = uuid.uuid4().hex[:8]
+    filename = f"{user_id}_{timestamp_str}_{unique_hash}{ext}"
     filepath = os.path.join('uploads', filename)
 
+    # --- Thumbnail Generation ---
+    thumbnail_filename = f"thumb_{filename}"
+    thumbnail_filepath = os.path.join('uploads', thumbnail_filename)
+    with PILImage.open(img) as img_pil:
+        # Create a thumbnail with a max dimension of 400px, preserving aspect ratio
+        img_pil.thumbnail((400, 400))
+        img_pil.save(thumbnail_filepath, "JPEG", quality=85)
+    # --- End Thumbnail Generation ---
+
+    # IMPORTANT: Reset the file stream's pointer to the beginning before saving the original.
+    # Reading the stream for thumbnail generation moves the pointer to the end.
+    img.seek(0)
     # Save image to uploads folder
     img.save(filepath)
 
@@ -92,6 +99,7 @@ def report_issue():
     report = Report(
         user_id=user_id,
         image_filename=filename,
+        thumbnail_filename=thumbnail_filename,
         issue_type=issue_type,
         user_defined_issue_type=user_defined_issue_type, # New field
         details=details, # New field
@@ -116,12 +124,75 @@ def get_report(report_id):
     
     return jsonify(report.to_dict())
 
+@report_bp.route('/reports/search', methods=['GET'])
+def search_reports():
+    query_str = request.args.get('q')
+    if not query_str or len(query_str) < 3:
+        return jsonify([]) # Return empty for short queries instead of an error
+
+    search_term = f"%{query_str}%"
+
+    # Search user-submitted reports (issue type, user-defined type, and details)
+    user_reports_query = Report.query.filter(
+        db.or_(
+            Report.issue_type.ilike(search_term),
+            Report.user_defined_issue_type.ilike(search_term),
+            Report.details.ilike(search_term)
+        )
+    )
+
+    # Search scraped reports (issue type and details)
+    scraped_reports_query = ScrapedReport.query.filter(
+        db.or_(
+            ScrapedReport.issue_type.ilike(search_term),
+            ScrapedReport.details.ilike(search_term)
+        )
+    )
+
+    # Combine and format results, adding a 'type' field for the frontend
+    user_results = [r.to_dict() for r in user_reports_query.all()]
+    for r in user_results:
+        r['type'] = 'user'
+
+    scraped_results = [r.to_dict() for r in scraped_reports_query.all()]
+    for r in scraped_results:
+        r['type'] = 'scraped'
+
+    all_results = sorted(user_results + scraped_results, key=lambda r: r.get('timestamp') or r.get('date_created'), reverse=True)
+
+    return jsonify(all_results[:50]) # Limit to the top 50 results
+
+@report_bp.route('/scraped-reports/<int:report_id>', methods=['GET'])
+def get_scraped_report(report_id):
+    report = ScrapedReport.query.get(report_id)
+    if report is None:
+        return jsonify({'error': 'Scraped report not found'}), 404
+    
+    return jsonify(report.to_dict())
+
 
 @report_bp.route('/user_reports', methods=['GET'])
 def get_all_reports():
-    reports = Report.query.all()
-    results = [r.to_dict() for r in reports]
-    return jsonify(results)
+    sw_lat = request.args.get('sw_lat', type=float)
+    sw_lng = request.args.get('sw_lng', type=float)
+    ne_lat = request.args.get('ne_lat', type=float)
+    ne_lng = request.args.get('ne_lng', type=float)
+    status = request.args.get('status')
+
+    query = Report.query
+
+    if all([sw_lat, sw_lng, ne_lat, ne_lng]):
+        query = query.filter(Report.latitude.between(sw_lat, ne_lat), Report.longitude.between(sw_lng, ne_lng))
+
+    if status == 'open':
+        # "submitted" and "in progress" are considered open.
+        query = query.filter(Report.status.in_(['submitted', 'in progress']))
+    elif status == 'closed':
+        query = query.filter(Report.status == 'closed')
+
+    # Add a limit for safety and consistency
+    reports = query.order_by(Report.timestamp.desc()).limit(500).all()
+    return jsonify([r.to_dict() for r in reports])
 
 @report_bp.route('/my-reports/<int:user_id>', methods=['GET'])
 def get_my_reports(user_id):
@@ -154,3 +225,35 @@ def delete_report(report_id):
     db.session.commit()
     
     return jsonify({'message': 'Report deleted successfully'}), 200
+
+@report_bp.route('/scraped-reports', methods=['GET'])
+def get_all_scraped_reports():
+    """
+    Fetches scraped reports. If map bounding box coordinates are provided as query
+    parameters, it filters reports within that box. Otherwise, it returns the
+    latest 500 reports.
+    """
+    sw_lat = request.args.get('sw_lat', type=float)
+    sw_lng = request.args.get('sw_lng', type=float)
+    ne_lat = request.args.get('ne_lat', type=float)
+    ne_lng = request.args.get('ne_lng', type=float)
+    status = request.args.get('status')
+
+    query = ScrapedReport.query
+
+    # Always filter out reports where the status is 'NotAnIssue'.
+    query = query.filter(db.not_(ScrapedReport.status.ilike('NotAnIssue')))
+    query = query.filter(db.not_(ScrapedReport.status.ilike('Cancelled')))
+
+    if all([sw_lat, sw_lng, ne_lat, ne_lng]):
+        query = query.filter(ScrapedReport.latitude.between(sw_lat, ne_lat), ScrapedReport.longitude.between(sw_lng, ne_lng))
+
+    if status == 'open':
+        # Use `not ilike` to find statuses that do not contain 'close' case-insensitively.
+        query = query.filter(db.not_(ScrapedReport.status.ilike('%close%')))
+    elif status == 'closed':
+        # Use `ilike` for case-insensitive matching for 'closed'.
+        query = query.filter(ScrapedReport.status.ilike('%close%'))
+
+    reports = query.order_by(ScrapedReport.date_created.desc()).limit(500).all()
+    return jsonify([r.to_dict() for r in reports])

@@ -4,7 +4,7 @@ import { useAuth } from '../../src/lib/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { getMyReports, deleteReport, Report } from '../../src/lib/api';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Image } from 'react-native';
+import { Image } from 'expo-image';
 
 
 export default function AccountScreen(): JSX.Element {
@@ -55,11 +55,20 @@ export default function AccountScreen(): JSX.Element {
                   router.push({
                     // Navigate to the detail screen from the (tabs) group
                     pathname: '../reportDetail',
-                    params: { ...item, latitude: String(item.latitude), longitude: String(item.longitude) },
+                    // Be explicit with params to ensure all data is passed correctly.
+                  // Pass only the ID and type. The detail screen will fetch the rest.
+                    params: {
+                    id: item.id,
+                    reportType: 'user',
+                  },
                   })
                 }
               >
-                <Image source={{ uri: item.image_url }} style={styles.reportImage} />
+                <Image 
+                  source={{ uri: item.thumbnail_url ?? item.image_url }} 
+                  style={styles.reportImage} 
+                  transition={300}
+                />
                 <View style={styles.reportTextContainer}>
                   <Text style={styles.reportText} numberOfLines={1}>
                     {item.issue_type === 'other' ? item.user_defined_issue_type : item.issue_type}

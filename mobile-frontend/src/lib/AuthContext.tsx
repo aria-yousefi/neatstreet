@@ -1,71 +1,63 @@
-import React, { createContext, useState, useEffect, useContext, PropsWithChildren } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loginUser, registerUser, User } from './api';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import * as SecureStore from 'expo-secure-store';
+import { User, loginUser, registerUser } from './api';
 
-const USER_STORAGE_KEY = 'neatstreet-user';
+const USER_STORAGE_KEY = 'neatstreet_user_session';
 
 interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
-  login: (username: string, password: string) => Promise<User>;
-  register: (username: string, email: string, password: string) => Promise<any>;
+  // Update login and add register to match the form submissions
+  login: (username: string, password: string) => Promise<void>;
+  register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  isLoading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: PropsWithChildren) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadUserFromStorage = async () => {
+    // On app startup, load the user from secure storage.
+    async function loadUserFromStorage() {
       try {
-        const storedUser = await AsyncStorage.getItem(USER_STORAGE_KEY);
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
+        const storedUserJson = await SecureStore.getItemAsync(USER_STORAGE_KEY);
+        if (storedUserJson) {
+          setUser(JSON.parse(storedUserJson));
         }
       } catch (e) {
-        console.error('Failed to load user from storage', e);
+        console.error("Failed to load user from storage", e);
       } finally {
+        // Auth state has been loaded, app can now navigate.
         setIsLoading(false);
       }
-    };
-
+    }
     loadUserFromStorage();
   }, []);
 
   const login = async (username: string, password: string) => {
-    try {
-      const { user: loggedInUser } = await loginUser({ username, password });
-      setUser(loggedInUser);
-      await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(loggedInUser));
-      return loggedInUser;
-    } catch (error) {
-      throw error; // Re-throw to be caught in the UI
-    }
+    const { user } = await loginUser({ username, password });
+    setUser(user);
+    await SecureStore.setItemAsync(USER_STORAGE_KEY, JSON.stringify(user));
   };
 
   const register = async (username: string, email: string, password: string) => {
-    return registerUser({ username, email, password });
+    // This function calls the API but does not log the user in automatically.
+    await registerUser({ username, email, password });
   };
 
   const logout = async () => {
     setUser(null);
-    await AsyncStorage.removeItem(USER_STORAGE_KEY);
+    await SecureStore.deleteItemAsync(USER_STORAGE_KEY);
   };
 
-  return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, register }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };

@@ -1,32 +1,24 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons'; // Using a default icon set
-import { Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-export default function TabLayout() {
+export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: Platform.OS === 'android', // Optional: show header on Android
-      }}>
+        tabBarActiveTintColor: '#FB8C00', // Use brand color for active tab
+      }}
+    >
       <Tabs.Screen
         name="index"
-        options={{
-          title: 'NeatStreet',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'map' : 'map-outline'} size={28} color={color} />
-          ),
-        }}
+        options={{ title: 'Map', headerShown: false, tabBarIcon: ({ color, size }) => <Ionicons name="map" size={size} color={color} /> }}
+      />
+      <Tabs.Screen
+        name="search"
+        options={{ title: 'Search', headerShown: false, tabBarIcon: ({ color, size }) => <Ionicons name="search" size={size} color={color} /> }}
       />
       <Tabs.Screen
         name="account"
-        options={{
-          title: 'My Account',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'person-circle' : 'person-circle-outline'} size={28} color={color} />
-          ),
-        }}
+        options={{ title: 'Account', headerShown: false, tabBarIcon: ({ color, size }) => <Ionicons name="person-circle" size={size} color={color} /> }}
       />
     </Tabs>
   );

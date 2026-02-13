@@ -91,8 +91,16 @@ export default function CreateReportScreen() {
         user_defined_issue_type: issueType === 'other' ? userDefinedIssueType.trim() : undefined,
         details: details.trim() || undefined,
       });
-      router.replace({ pathname: '/', params: { refresh: 'true' } });
-      Alert.alert('Report Submitted', 'Your report has been submitted successfully!');
+      // Show an alert and navigate only when the user presses "OK".
+      // This prevents the alert from interfering with the navigation transition and
+      // ensures the modal stack is dismissed correctly.
+      Alert.alert(
+        'Report Submitted',
+        'Your report has been submitted successfully!',
+        [
+          { text: 'OK', onPress: () => router.navigate({ pathname: '/', params: { refresh: 'true' } }) }
+        ]
+      );
     } catch (e: any) {
       Alert.alert('Submit failed', e.message ?? String(e));
     } finally {
@@ -143,5 +151,5 @@ export default function CreateReportScreen() {
 
 // Styles from your old CreateReportScreen.js
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' }, scrollContent: { paddingBottom: 40 }, hero: { width: '100%', height: 260, backgroundColor: '#f2f2f2' }, section: { paddingHorizontal: 16, paddingTop: 16 }, label: { fontSize: 12, color: '#666', marginBottom: 8 }, value: { fontSize: 15, fontWeight: '600' }, chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, chip: { borderWidth: 1, borderColor: '#ddd', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: '#fff' }, chipSelected: { borderColor: '#111', backgroundColor: '#111' }, chipText: { fontWeight: '700', color: '#111' }, chipTextSelected: { color: '#fff' }, note: { marginTop: 10, color: '#666' }, footer: { padding: 16, paddingTop: 24 }, primaryBtn: { paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: '#111', backgroundColor: '#111', alignItems: 'center' }, primaryBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 }, disabled: { opacity: 0.4 }, center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#fff' }, textInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginTop: 10, fontSize: 15 }, detailsInput: { minHeight: 80, textAlignVertical: 'top' },
+  container: { flex: 1, backgroundColor: '#fff' }, scrollContent: { paddingBottom: 40 }, hero: { width: '100%', height: 260, backgroundColor: '#f2f2f2' }, section: { paddingHorizontal: 16, paddingTop: 16 }, label: { fontSize: 12, color: '#666', marginBottom: 8 }, value: { fontSize: 15, fontWeight: '600' }, chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, chip: { borderWidth: 1, borderColor: '#ddd', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: '#fff' }, chipSelected: { borderColor: '#FB8C00', backgroundColor: '#FB8C00' }, chipText: { fontWeight: '700', color: '#111' }, chipTextSelected: { color: '#fff' }, note: { marginTop: 10, color: '#666' }, footer: { padding: 16, paddingTop: 24 }, primaryBtn: { paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: '#FB8C00', backgroundColor: '#FB8C00', alignItems: 'center' }, primaryBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 }, disabled: { opacity: 0.4 }, center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#fff' }, textInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginTop: 10, fontSize: 15 }, detailsInput: { minHeight: 80, textAlignVertical: 'top' },
 });
